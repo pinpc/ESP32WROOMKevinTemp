@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include <WiFiUdp.h>
 #include <NTPClient.h>
+#include <ArduinoJson.h>
 #include <string>
 #include "weather.h"
 
@@ -16,8 +17,9 @@ U8G2_SH1106_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0, /* reset=*/U8X8_PIN_NONE);
 
 u8g2_uint_t offset;
 u8g2_uint_t width;
-
-
+std::string temp_out = "";
+std::string temp_in = "";
+Adafruit_SHT31 sht31;
 const char* ntpServer = "pool.ntp.org";
 const long utcOffsetInSeconds = 3600;    //GMT+1 für DE
 const int daylightOffset_sec = 3600;//+1 für Sommerzeit
@@ -25,54 +27,68 @@ const int daylightOffset_sec = 3600;//+1 für Sommerzeit
 WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP, "pool.ntp.org", utcOffsetInSeconds);
 
+void DisplayInit(){
+  u8g2.begin();
+  u8g2.enableUTF8Print();
+  u8g2.clearBuffer();
+}
+
 void clearDisplayArea(int x, int y, int w, int h) {
   u8g2.setDrawColor(0); // Set color to "background"
   u8g2.drawBox(x, y, w, h); // Clear the specified area
   u8g2.setDrawColor(1); // Reset color to "foreground"
 }
 
-void displayTemperature(){
-  u8g2.begin();
-  u8g2.enableUTF8Print();
-  std::string temp_out2 = temp_out;
-  //const char* temp_out3 = temp_out2.c_str(); 
-  u8g2.clearBuffer();
-  u8g2.setFont(u8g2_font_ncenB12_tr);
-  u8g2.drawStr(0,60,temp_out2.c_str());
-  Serial.println(temp_out2.c_str());
+void displaySystem( String restart, String heapuse){
+  u8g2.setFont(u8g2_font_ncenB08_tr);
+  clearDisplayArea(0, 0, 128, 12);
+  u8g2.drawStr(0, 12, restart.c_str());
+  u8g2.drawStr(90, 12, heapuse.c_str());
+  u8g2.sendBuffer(); 
+  Serial.print(restart+"- ");
+  Serial.println(heapuse);
 }
-
-/*void displayTemp_in(){
-  u8g2.setFont(u8g2_font_ncenB12_tr);
-  u8g2.drawStr(60,60,temp_in.c_str());
-}*/
-
-void displayTemp_in2(){
-  clearDisplayArea(64,32,64,32);
-  u8g2.setFont(u8g2_font_ncenB12_tr);
-  u8g2.drawStr(60,60,temp_in3.c_str());
-}
-
 
 void displayTime(){
-  u8g2.setFont(u8g2_font_logisoso18_tf);
-  clearDisplayArea(0,16,128,31);
-  //clearDisplayArea(0,16,128,41);
+  u8g2.setFont(u8g2_font_ncenB14_tr);
+  clearDisplayArea(0, 12, 127, 21);
   timeClient.update();
   String time = timeClient.getFormattedTime();
   
-  u8g2.drawStr(5,40, time.c_str());
- //u8g2.drawStr(0,20, "21:50 Uhr");
+  u8g2.drawStr(15, 40, time.c_str()); //"21:50:12" 
   u8g2.sendBuffer(); 
   Serial.println(time);
 }
 
-void displaySystem( String restart, String heapuse){
+void displayTemperature(std::string temp_out, std::string temp_in){
+   
   u8g2.setFont(u8g2_font_ncenB12_tr);
-  clearDisplayArea(0,u8g2.getAscent(),u8g2.getDisplayWidth(),u8g2.getAscent());
-  u8g2.drawStr(0,u8g2.getAscent(), restart.c_str());
-  u8g2.drawStr(50,u8g2.getAscent(), heapuse.c_str());
+  clearDisplayArea(0, 41, 127, 23);
+  u8g2.drawStr(0,64,temp_out.c_str());
+  u8g2.drawStr(60,64,temp_in.c_str());
   u8g2.sendBuffer(); 
-  Serial.print(restart+"- ");
-  Serial.println(heapuse);
+  Serial.println(temp_out.c_str());
+  Serial.println(temp_in.c_str());
+}
+
+void getWhetherTemp(){
+  float value;
+  char buff[7];
+  
+  const char* forecast = getWeatherRequest().c_str();
+  StaticJsonDocument<1024> doc;
+  // JSON-String in ein JSON-Objekt parsen
+  DeserializationError error = deserializeJson(doc, forecast);
+  
+  if (error) {
+    Serial.print("JSON-Parsing fehlgeschlagen: ");
+    Serial.println(error.c_str());
+    return;
+  }
+  else{
+    value = doc["current"]["temperature_2m"];
+    snprintf(buff, sizeof(buff), "%.2f", value);
+    temp_out = std::string(buff);
+    Serial.println(temp_out.c_str());
+  }  
 }

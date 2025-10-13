@@ -1,5 +1,5 @@
-#ifndef WEATHER_H
-#define WEATHER_H
+#ifndef WEATHER
+#define WEATHER
 
 #include <U8g2lib.h>
 #include <Adafruit_SHT31.h>
@@ -7,18 +7,14 @@
 extern Adafruit_SHT31 sht31;
 
 extern std::string temp_out;
-extern std::string temp_in2;
-extern std::string temp_in3;
+extern std::string temp_in;
 extern float t;
 extern float h;
-//extern std::string temp_in;
-//extern std::string voltage_in;
 
-
-void displayTemperature();
-void displayTime();
-void displayTemp_in2();
+void DisplayInit();
 void displaySystem( String restart, String heapuse);
-//void displayTemp_in();
-String getWeatherRequest(); 
+void displayTime();
+void displayTemperature(std::string temp_out, std::string temp_in);
+void getWhetherTemp();
+String getWeatherRequest();
 #endif
