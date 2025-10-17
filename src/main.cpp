@@ -7,8 +7,9 @@
 #include "weather.h"
 #include <EEPROM.h>
 
-const char* ssid = "Fritz-ZW";
-const char* password = "Fritzbox!2020";
+const char* ssid = "xxxxxx";
+const char* password = "xxxxxx";
+const int8_t tempoffset = -5;
 int restartcounter;
 uint32_t heapfree = 0;
 float heapusage;
@@ -97,7 +98,7 @@ void loop() {
       Serial.println("5 seconds passed");
       
       getWhetherTemp();
-      t = sht31.readTemperature();
+      t = sht31.readTemperature() + tempoffset;
       h = sht31.readHumidity(); 
       snprintf(buff, sizeof(buff), "%.2f", t);
       temp_in = std::string(buff);
